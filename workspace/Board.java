@@ -1,5 +1,3 @@
-
-
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
@@ -57,12 +55,10 @@ public class Board extends JPanel implements MouseListener, MouseMotionListener 
 
         this.addMouseListener(this);
         this.addMouseMotionListener(this);
-
-        //TO BE IMPLEMENTED FIRST
      
       //for (.....)  
-//        	populate the board with squares here. Note that the board is composed of 64 squares alternating from 
-//        	white to black.
+    //populate the board with squares here. Note that the board is composed of 64 squares alternating from 
+    //white to black.
         boolean color = true;
         for (int  row = 0; row <board.length; row++) {
             for (int col = 0; col < board[row].length; col++) {
@@ -93,12 +89,32 @@ public class Board extends JPanel implements MouseListener, MouseMotionListener 
 	//since we only have one kind of piece for now you need only set the same number of pieces on either side.
 	//it's up to you how you wish to arrange your pieces.
     private void initializePieces() {
-    	
-    	board[4][4].put(new Piece(true, RESOURCES_WKING_PNG));
-        board[4][5].put(new Piece(false, RESOURCES_BKING_PNG));
-        board[5][4].put(new Piece(true, RESOURCES_WKING_PNG));
+        // White pieces
+        board[7][0].put(new Church(true, RESOURCES_WROOK_PNG));
+        board[7][1].put(new Banneret(true, RESOURCES_WKNIGHT_PNG));
+        board[7][2].put(new RandomMover(true, RESOURCES_WBISHOP_PNG));
+        board[7][3].put(new FoolsKing(true, RESOURCES_WKING_PNG));
+        board[7][4].put(new King(true, RESOURCES_WKING_PNG));
+        board[7][5].put(new RandomMover(true, RESOURCES_WBISHOP_PNG));
+        board[7][6].put(new Banneret(true, RESOURCES_WKNIGHT_PNG));
+        board[7][7].put(new Church(true, RESOURCES_WROOK_PNG));
+        for (int i = 0; i <= 7; i++) {
+            board [6][i].put(new Pawn(true, RESOURCES_WPAWN_PNG));
+        }
 
-
+        // Black pieces
+        board[0][0].put(new Church(false, RESOURCES_BROOK_PNG));
+        board[0][1].put(new Banneret(false, RESOURCES_BKNIGHT_PNG));
+        board[0][2].put(new RandomMover(false, RESOURCES_BBISHOP_PNG));
+        board[0][3].put(new FoolsKing(false, RESOURCES_BKING_PNG));
+        board[0][4].put(new King(false, RESOURCES_BKING_PNG));
+        board[0][5].put(new RandomMover(false, RESOURCES_BBISHOP_PNG));
+        board[0][6].put(new Banneret(false, RESOURCES_BKNIGHT_PNG));
+        board[0][7].put(new Church(false, RESOURCES_BROOK_PNG));
+        for (int i = 0; i <= 7; i++) {
+            board [1][i].put(new Pawn(false, RESOURCES_BPAWN_PNG));
+        }
+        
     }
 
     public Square[][] getSquareArray() {
@@ -157,26 +173,71 @@ public class Board extends JPanel implements MouseListener, MouseMotionListener 
         }
         repaint();
     }
+    
+    //precondition - the board is initialized and contains a king of either color. The boolean kingColor corresponds to the color of the king we wish to know the status of.
+    //postcondition - returns true of the king is in check and false otherwise.
+    public boolean isInCheck(boolean kingColor) {
+        Square kingSquare = null;
+        for (int row = 0; row < 8; row++) {
+            for (int col = 0; col < 8; col++) {
+                Square s = board[row][col];
+                if (s.isOccupied() && 
+                    s.getOccupyingPiece() instanceof King &&
+                    s.getOccupyingPiece().getColor() == kingColor) {
+                    kingSquare = s;
+                    break;
+                }
+            }
+        }
+        if (kingSquare == null) return false;
+    
+        boolean oppositeColor = !kingColor;
+        for (int row = 0; row < 8; row++) {
+            for (int col = 0; col < 8; col++) {
+                Square s = board[row][col];
+                if (s.isOccupied() && 
+                    s.getOccupyingPiece().getColor() == oppositeColor) {
+                    
+                    Piece p = s.getOccupyingPiece();
+                    List<Square> controlled = p.getControlledSquares(board, s);
+                    if (controlled.contains(kingSquare)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
 
-    //TO BE IMPLEMENTED!
-    //should move the piece to the desired location only if this is a legal move.
-    //use the pieces "legal move" function to determine if this move is legal, then complete it by
-    //moving the new piece to it's new board location. 
     @Override
     public void mouseReleased(MouseEvent e) {
         Square endSquare = (Square) this.getComponentAt(new Point(e.getX(), e.getY()));
         
-        //using currPiece
-       if (currPiece != null && currPiece.getLegalMoves(this, fromMoveSquare).contains(endSquare)){
-        endSquare.put(currPiece);
-        fromMoveSquare.removePiece();
-        whiteTurn = !whiteTurn;
-       }
-        for (int  row = 0; row <board.length; row++) {
+        if (currPiece != null && currPiece.getLegalMoves(this, fromMoveSquare).contains(endSquare) && currPiece.color == whiteTurn) {
+            Piece originalFrom = currPiece;
+            Piece originalTo = endSquare.getOccupyingPiece();
+            
+            fromMoveSquare.removePiece();
+            endSquare.put(originalFrom);
+            
+            if (isInCheck(whiteTurn)) {
+                // Undo invalid move
+                fromMoveSquare.put(originalFrom);
+                if (originalTo != null) {
+                    endSquare.put(originalTo);
+                } else {
+                    endSquare.removePiece();
+                }
+            } else {
+                whiteTurn = !whiteTurn;
+            }
+        }
+        
+        for (int row = 0; row < board.length; row++) {
             for (int col = 0; col < board[row].length; col++) {
-                board [row] [col].setBorder(null);
-       }
-    }
+                board[row][col].setBorder(null);
+            }
+        }
         fromMoveSquare.setDisplay(true);
         currPiece = null;
         repaint();
